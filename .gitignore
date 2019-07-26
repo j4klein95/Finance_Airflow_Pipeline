@@ -1,2 +1,7 @@
 dl.cfg
 api_exploration.ipynb
+ticker_symbols.csv
+airflow/airflow.db
+airflow.db
+.ipynb_checkpoints
+.DS_Store
