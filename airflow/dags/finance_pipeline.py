@@ -34,7 +34,7 @@ dag = DAG('finance_data_pipeline',
 qdl.ApiConfig.api_key = "quandl"
 conn = "redshift"
 wt_key = "wt_key"
-
+rs_tables = ["us_stock_market_confidence_indices", "sp_500_composite_hist", "investment_sentiment"]
 
 ################### FUNCTIONS FOR THE DAG TO EXECUTE #####################################
 def loadQuandl_sentiment(conn, redshift_table, **kwargs):
@@ -42,8 +42,11 @@ def loadQuandl_sentiment(conn, redshift_table, **kwargs):
     Function that goes out, pulls Investor Sentiment data, puts that data into a dataframe, loads directly into redshift
     
     Parameters:
+    
     conn (Database Connection): A connection to the Redshift Database.
+    
     redshift_table (str): The name of the table we are loading data too.
+    
     **kwargs (kwargs): Needed for Python Operator in Airflow to set parameters.
     
     Returns:
@@ -67,8 +70,11 @@ def loadQuandl_yaleConf(conn, redshift_table, **kwargs):
     Function that goes out, pulls indivdiual confidence data for valuation, crashes, and buy on dips. Combines into dataframe, and uploads to Redshift
     
     Parameters:
+    
     conn (Database Connection): A connection to the Redshift Database.
+    
     redshift_table (str): The name of the table we are loading data too.
+    
     **kwargs (kwargs): Needed for Python Operator in Airflow to set parameters.
     
     Returns:
@@ -101,7 +107,9 @@ def loadQuandl_yaleComp(conn, redshift_table, **kwargs):
     
     Parameters:
     conn (Database Connection): A connection to the Redshift Database.
+    
     redshift_table (str): The name of the table we are loading data too.
+    
     **kwargs (kwargs): Needed for Python Operator in Airflow to set parameters.
     
     Returns:
@@ -125,8 +133,11 @@ def get_ticker_data(wt_api_key, conn, table, **kwargs):
     
     Parameters:
     conn (Database Connection): A connection to the Redshift Database.
+    
     table (str): The name of the table we are loading data to.
+    
     wt_api_key (str): The API key for making calls and gathering JSON data.
+    
     **kwargs (kwargs): Needed for Python Operator in Airflow. 
     """
     #Input API Keys
@@ -156,6 +167,31 @@ def get_ticker_data(wt_api_key, conn, table, **kwargs):
     #Load to RedShift
     processed_df.to_sql(table, conn, index=False, if_exists='replace')
     log.info(f'Successfully loaded ticker history to {table}')
+    
+def data_quality_check(redshift_conn, tables, **kwargs):
+    """
+    Does a quick data quality and validation check.
+    
+    Parameters:
+    
+    redshift_conn (Database connection): Connection redshift database.
+    
+    table (list): A list of strings that identify tables for validation. 
+    
+    Returns:
+    None
+    
+    """
+    log.info('Implementing DataQualityOperator now.')
+    hook_redshift = PostgresHook(redshift_conn)
+    for table in tables:
+        records = hook_redshift.get_records(f"SELECT COUNT(*) FROM {table}")
+        if len(records) < 1 or len(records[0]) < 1:
+            self.log.error(f"Table: {table} returned nothing.")
+        num_records = records[0][0]
+        if num_records == 0:
+            self.log.error(f"{table} returned no records in destination.")
+        self.log.info(f"Data validation check on {table} is completed.")
 
 ################### CREATE TASKS FOR DAG #############################################
 start_operator = DummyOperator(task_id='Begin_execution',  dag=dag)
@@ -193,6 +229,14 @@ load_ticker_history = PythonOperator(
     op_kwargs= {'conn' : conn, 'table': 'hist_market_data', 'wt_api_key': wt_key }
 )
 
+data_quality_check = PythonOperator(
+    task_id='data_quality_check',
+    dag=dag,
+    provide_context=True,
+    python_callable=data_quality_check,
+    op_kwargs = {'redshift_conn' : conn, "tables" : rs_tables}
+)
+
 
 ################### SPECIFY ORDER OF TASKS IN THE DAG ##################################
 end_operator = DummyOperator(task_id='Stop_execution',  dag=dag)
@@ -201,4 +245,6 @@ start_operator >> load_individual_confidence_data >> load_ticker_history
 start_operator >> load_yale_sp_Comp >> load_ticker_history
 start_operator >> load_inv_sentiment >> load_ticker_history
 
-load_ticker_history >> end_operator
+load_ticker_history >> data_quality_check
+
+data_quality_check >> end_operator
