@@ -1,0 +1,35 @@
+[2019-07-25 18:17:55,816] {dag_processing.py:788} INFO - Processing files using up to 1 processes at a time 
+[2019-07-25 18:17:55,817] {dag_processing.py:789} INFO - Process each file at most once every 0 seconds
+[2019-07-25 18:17:55,817] {dag_processing.py:791} INFO - Checking for new files in /Users/j4klein95/data_work/udacity_DataEngineer/capstone/airflow/dags every 300 seconds
+[2019-07-25 18:17:55,830] {dag_processing.py:1011} INFO - 
+================================================================================
+DAG File Processing Stats
+
+File Path                                                                                                                      PID  Runtime    Last Runtime    Last Run
+---------------------------------------------------------------------------------------------------------------------------  -----  ---------  --------------  ----------
+/Users/j4klein95/data_work/udacity_DataEngineer/capstone/airflow/dags/finance_pipeline_dag.py
+/Users/j4klein95/data_work/udacity_DataEngineer/capstone/airflow/dags/.ipynb_checkpoints/finance_pipeline_dag-checkpoint.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_latest_only.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_python_operator.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/test_utils.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_bash_operator.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_short_circuit_operator.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_branch_operator.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_docker_operator.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/tutorial.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/docker_copy_data.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_passing_params_via_test_command.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_latest_only_with_trigger.py                 32275  0.00s
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_xcom.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_http_operator.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_skip_dag.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_trigger_target_dag.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_branch_python_dop_operator_3.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_subdag_operator.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/example_trigger_controller_dag.py
+/anaconda3/envs/udacity/lib/python3.7/site-packages/airflow/example_dags/subdags/subdag.py
+================================================================================
+[2019-07-25 18:27:56,673] {dag_processing.py:774} INFO - Exiting gracefully upon receiving signal 15
+[2019-07-25 18:27:56,675] {dag_processing.py:774} INFO - Exiting gracefully upon receiving signal 15
+[2019-07-25 18:27:58,679] {dag_processing.py:774} INFO - Exiting gracefully upon receiving signal 15
+[2019-07-25 18:27:58,684] {dag_processing.py:1295} INFO - Waiting up to 5 seconds for processes to exit...
