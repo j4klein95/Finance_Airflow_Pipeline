@@ -1,6 +1,5 @@
 dl.cfg
 api_exploration.ipynb
-ticker_symbols.csv
 airflow/airflow.db
 airflow.db
 .ipynb_checkpoints
@@ -8,4 +7,4 @@ airflow.db
 .ipynb_checkpoints/README-checkpoint.md
 Logs
 airflow/Logs
-Data/ticker_symbols.csv
+data/ticker_symbols.csv
