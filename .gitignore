@@ -6,3 +6,6 @@ airflow.db
 .ipynb_checkpoints
 .DS_Store
 .ipynb_checkpoints/README-checkpoint.md
+Logs
+airflow/Logs
+Data/ticker_symbols.csv
