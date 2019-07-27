@@ -3,20 +3,23 @@ import os
 from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.operators.python_operator import PythonOperator
+from airflow.models import Variable
+from airflow.hooks.postgres_hook import PostgresHook
+from airflow.contrib.hooks.aws_hook import AwsHook
 # from airflow.operators import DataQualityOperator
 # from helpers import Quandl_Conf
 # from helpers import SqlQueries
 import quandl as qdl
-# import sys
-# sys.path.insert(0, 'airflow/functions/')
-# from quandl_func import loadQuandl_sentiment, loadQuandl_yaleComp, loadQuandl_yaleConf
+import logging as log
+import pandas as pd
+from sqlalchemy import create_engine
 
 #Create Default arguments to define behavior of the Dag.
 default_args = {
     'owner': 'jay',
     'start_date': datetime(2019, 1, 12),
     'retries': 3,
-    'retry_delay' : timedelta(minutes=5),
+    'retry_delay' : timedelta(seconds=30),
     'catchup' : False,
     'email_on_retry' : False
 }
@@ -31,9 +34,9 @@ dag = DAG('finance_data_pipeline',
 
 #Normally, I would put this information in Airflow itself, but since the Dag does not want
 #   to read my plugins and helpers, I may need to setup a config file instead.
-qdl.ApiConfig.api_key = "quandl"
-conn = "redshift"
-wt_key = "wt_key"
+qdl.ApiConfig.api_key = Variable.get("quandl")
+conn = create_engine(Variable.get("redshift"))
+wt_key = Variable.get("wt_key")
 rs_tables = ["us_stock_market_confidence_indices", "sp_500_composite_hist", "investment_sentiment"]
 
 ################### FUNCTIONS FOR THE DAG TO EXECUTE #####################################
@@ -61,8 +64,8 @@ def loadQuandl_sentiment(conn, redshift_table, **kwargs):
     finished_sentiments = filtered_sentiments.reset_index()
     
     #Load data to RedShift 
-    finished_sentiments.to_sql(table, conn, index=False, if_exists='replace')
-    log.info(f'Successfully loaded Investor Sentiment data to {table}.')
+    finished_sentiments.to_sql(redshift_table, conn, index=False, if_exists='replace')
+    log.info(f'Successfully loaded Investor Sentiment data to {redshift_table}.')
 
 
 def loadQuandl_yaleConf(conn, redshift_table, **kwargs):
@@ -98,8 +101,8 @@ def loadQuandl_yaleConf(conn, redshift_table, **kwargs):
     confidence_final = pd.merge(confidence_, bod_conf, on="Date")
     
     #Send to Redshift
-    confidence_final.to_sql(table, conn, index=False, if_exists='replace')
-    log.info(f"Successfully loaded Individual's Confidence data to {table}.")
+    confidence_final.to_sql(redshift_table, conn, index=False, if_exists='replace')
+    log.info(f"Successfully loaded Individual's Confidence data to {redshift_table}.")
     
 def loadQuandl_yaleComp(conn, redshift_table, **kwargs):
     """
@@ -123,8 +126,8 @@ def loadQuandl_yaleComp(conn, redshift_table, **kwargs):
     finished_data = raw_sp_comp.reset_index()
     
     #Move data to Redshift         
-    finished_data.to_sql(table, conn, index=False, if_exists='replace')
-    log.info(f'Successfully loaded Yale S&P Composite data to {table}')
+    finished_data.to_sql(redshift_table, conn, index=False, if_exists='replace')
+    log.info(f'Successfully loaded Yale S&P Composite data to {redshift_table}')
     
 def get_ticker_data(wt_api_key, conn, table, **kwargs):
     """
@@ -143,7 +146,7 @@ def get_ticker_data(wt_api_key, conn, table, **kwargs):
     #Input API Keys
     
     #Make list of ticker symbols
-    ticker_df = pd.read_csv('../data/WIKI_metadata.csv')
+    ticker_df = pd.read_csv('data/WIKI_metadata.csv')
     ticker_lst = ticker_df['code']
     
     #Get List of Dates, utilize quandl API for specific dtes needed
@@ -187,11 +190,11 @@ def data_quality_check(redshift_conn, tables, **kwargs):
     for table in tables:
         records = hook_redshift.get_records(f"SELECT COUNT(*) FROM {table}")
         if len(records) < 1 or len(records[0]) < 1:
-            self.log.error(f"Table: {table} returned nothing.")
+            log.error(f"Table: {table} returned nothing.")
         num_records = records[0][0]
         if num_records == 0:
-            self.log.error(f"{table} returned no records in destination.")
-        self.log.info(f"Data validation check on {table} is completed.")
+            log.error(f"{table} returned no records in destination.")
+        log.info(f"Data validation check on {table} is completed.")
 
 ################### CREATE TASKS FOR DAG #############################################
 start_operator = DummyOperator(task_id='Begin_execution',  dag=dag)
@@ -218,14 +221,14 @@ load_inv_sentiment = PythonOperator(
     dag=dag,
     provide_context=True,
     python_callable=loadQuandl_sentiment,
-    op_kwargs = {'conn' : conn , 'redshift_table': 'sp_500_composite_hist'}
+    op_kwargs = {'conn' : conn , 'redshift_table': 'invest_sentiment'}
 )
 
 load_ticker_history = PythonOperator(
     task_id='Load_ticker_history_to_redshift',
     dag=dag,
     provide_context=True,
-    python_callable=get_ticker_data,
+    python_callable=get_ticker_data
     op_kwargs= {'conn' : conn, 'table': 'hist_market_data', 'wt_api_key': wt_key }
 )
 
@@ -241,9 +244,13 @@ data_quality_check = PythonOperator(
 ################### SPECIFY ORDER OF TASKS IN THE DAG ##################################
 end_operator = DummyOperator(task_id='Stop_execution',  dag=dag)
 
-start_operator >> load_individual_confidence_data >> load_ticker_history
-start_operator >> load_yale_sp_Comp >> load_ticker_history
-start_operator >> load_inv_sentiment >> load_ticker_history
+start_operator >> load_individual_confidence_data 
+start_operator >> load_yale_sp_Comp 
+start_operator >> load_inv_sentiment 
+
+load_inv_sentiment >> load_ticker_history
+load_yale_sp_Comp >> load_ticker_history
+load_individual_confidence_data >> load_ticker_history
 
 load_ticker_history >> data_quality_check
 
