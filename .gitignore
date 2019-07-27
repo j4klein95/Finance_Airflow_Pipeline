@@ -7,4 +7,4 @@ airflow.db
 .ipynb_checkpoints/README-checkpoint.md
 Logs
 airflow/Logs
-data/ticker_symbols.csv
+ticker_symbols.csv
